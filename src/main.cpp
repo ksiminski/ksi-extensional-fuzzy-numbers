@@ -3,6 +3,13 @@
  *
  * @author Krzysztof Siminski
  * @date   2024-09-06
+ * @date   2026-07-30
+ *
+ * CITATION REQUEST:
+ * Please cite this if you use this code:
+ * 
+ *
+ *
  *
  * */
 
@@ -22,31 +29,36 @@
 
 #define debug(x) std::cerr << __FILE__ << " (" << __LINE__ << ") " << #x << " : " << (x) << std::endl
 
-class tnorm 
+///////////////////////////////////////
+namespace  ksi 
 {
-   public: 
-      virtual double value (const double a, const double b) const = 0;
-};
+   class tnorm 
+   {
+      public: 
+         virtual ~tnorm() = default;
+         virtual double value (const double a, const double b) const = 0;
+   };
 
-class tnorm_product : public tnorm
-{
-   public: 
-      virtual double value (const double a, const double b) const override 
-      {
-         return a * b;
-      }
-};
+   class tnorm_product : public tnorm
+   {
+      public: 
+         virtual double value (const double a, const double b) const override 
+         {
+            return a * b;
+         }
+   };
 
-class fuzzy_set
-{
-   public :
-      virtual double membership (const double x) const = 0;
-};
+   class fuzzy_set
+   {
+      public :
+         virtual ~fuzzy_set() = default;
+         virtual double membership (const double x) const = 0;
+   };
 
-class fuzzy_set_triangle : public fuzzy_set
-{
-   double _supp_left, _core, _supp_right;
-   public :
+   class fuzzy_set_triangle : public fuzzy_set
+   {
+      double _supp_left, _core, _supp_right;
+      public :
       fuzzy_set_triangle (const double support_left, const double core, const double support_right) : _supp_left(support_left), _core(core), _supp_right(support_right) {}
 
       virtual double membership (const double x) const override
@@ -63,46 +75,45 @@ class fuzzy_set_triangle : public fuzzy_set
          }
          return 0.0;
       }
-};
-// / / / / / / / / / / / / /     
+   };
+   //////////////////////////
 
-std::map<double, double> fuzzy_operation (const fuzzy_set & A, const fuzzy_set & B, const tnorm & t, const auto op, const double mini_x, const double maxi_x, const double step)
-{
-   std::map<double, double> result;
-
-   for (double x = mini_x; x <= maxi_x; x += step)
+   std::map<double, double> fuzzy_operation (const fuzzy_set & A, const fuzzy_set & B, const tnorm & t, const auto op, const double mini_x, const double maxi_x, const double step)
    {
-      for (double y = mini_x; y <= maxi_x; y += step)
+      std::map<double, double> result;
+
+      for (double x = mini_x; x <= maxi_x; x += step)
       {
-         double memb = t.value(A.membership(x), B.membership(y));
-         double z = op(x, y);
-         double prev = result[z];
-         // debug(x); debug(y); debug(z); debug(value); debug(prev);
-         result[z] = std::max(prev, memb);
+         for (double y = mini_x; y <= maxi_x; y += step)
+         {
+            double memb = t.value(A.membership(x), B.membership(y));
+            double z = op(x, y);
+            double prev = result[z];
+            // debug(x); debug(y); debug(z); debug(value); debug(prev);
+            result[z] = std::max(prev, memb);
+         }
       }
+      return result;
    }
-   return result;
-}
 
 
-///////////////////////////////////////
-namespace  ksi 
-{
 
    template <class T> 
-   void print (typename std::vector<T> & A)
-   {
-      std::cout << "[ ";
-      for (const auto & a : A)
-         std::cout << a << " ";
-      std::cout << "]" << std::endl;
-   }
+      void print (typename std::vector<T> & A)
+      {
+         std::cout << "[ ";
+         for (const auto & a : A)
+            std::cout << a << " ";
+         std::cout << "]" << std::endl;
+      }
 
    class extensional_fuzzy_number
    { 
+      public:
+         virtual ~extensional_fuzzy_number() = default;
    };
-   
-   class triangular_efn  : public extensional_fuzzy_number
+
+   class triangular_efn : public extensional_fuzzy_number
    {
       public:
          triangular_efn () : triangular_efn(0.0, 0.0) {} 
@@ -113,9 +124,9 @@ namespace  ksi
          }
          static double equal (const triangular_efn & l, const triangular_efn & r)
          {
-               double d = std::abs(l._core - r._core);
-               double p = std::max(l._p, r._p); 
-               return relation(0.0, d, p);
+            double d = std::abs(l._core - r._core);
+            double p = std::max(l._p, r._p); 
+            return relation(0.0, d, p);
          }
          static double less (const triangular_efn & l, const triangular_efn & r)
          {
@@ -153,7 +164,7 @@ namespace  ksi
                return 1;
             }
          }
-         
+
          //////////////////
          static triangular_efn zero () 
          {
@@ -181,13 +192,13 @@ namespace  ksi
             return sos << "(" << t._core << ", " << t._p << ")";
          }
          //////////////////
-       protected:
-          double _core; // core of the number
-          double _p; // half of the support
+      protected:
+         double _core; // core of the number
+         double _p; // half of the support
 
    };
 
-   class trapezoidal_efn 
+   class trapezoidal_efn : public extensional_fuzzy_number 
    {
       public:
          trapezoidal_efn () : trapezoidal_efn(0.0, 0.0) {} 
@@ -198,9 +209,9 @@ namespace  ksi
          }
          static double equal (const trapezoidal_efn & l, const trapezoidal_efn & r)
          {
-               double d = std::abs(l._core - r._core);
-               double p = std::max(l._p, r._p); 
-               return relation(0.0, d, p, _k);
+            double d = std::abs(l._core - r._core);
+            double p = std::max(l._p, r._p); 
+            return relation(0.0, d, p, _k);
          }
          static double less (const trapezoidal_efn & l, const trapezoidal_efn & r)
          {
@@ -239,7 +250,7 @@ namespace  ksi
                return 1;
             }
          }
-         
+
          //////////////////
          static trapezoidal_efn zero () 
          {
@@ -274,8 +285,7 @@ namespace  ksi
 
    };
 
-   /** To nie jest chyba dobry pomysł, bo przy taka relacja nie jest symetryczna. */
-   class triangular_asymmetric_efn 
+   class triangular_asymmetric_efn  : public extensional_fuzzy_number
    {
       public:
          triangular_asymmetric_efn () : triangular_asymmetric_efn(0.0, 0.0, 0.0) {} 
@@ -289,10 +299,10 @@ namespace  ksi
          }
          static double equal (const triangular_asymmetric_efn & l, const triangular_asymmetric_efn & r)
          {
-               double d = std::abs(l._core - r._core);
-               double p_left = std::max(l._p_left, r._p_left); 
-               double p_right = std::max(l._p_right, r._p_right); 
-               return relation(0.0, d, p_left, p_right);
+            double d = std::abs(l._core - r._core);
+            double p_left = std::max(l._p_left, r._p_left); 
+            double p_right = std::max(l._p_right, r._p_right); 
+            return relation(0.0, d, p_left, p_right);
          }
          static double less (const triangular_asymmetric_efn & l, const triangular_asymmetric_efn & r)
          {
@@ -363,7 +373,7 @@ namespace  ksi
 
    };
 
-   class gaussian_efn 
+   class gaussian_efn  : public extensional_fuzzy_number
    {
       public:
          gaussian_efn () : gaussian_efn(0.0, 0.0) {} 
@@ -376,9 +386,9 @@ namespace  ksi
          }
          static double equal (const gaussian_efn & l, const gaussian_efn & r)
          {
-               double d = std::abs(l._core - r._core);
-               double p = std::max(l._p, r._p); 
-               return relation(0.0, d, p);
+            double d = std::abs(l._core - r._core);
+            double p = std::max(l._p, r._p); 
+            return relation(0.0, d, p);
          }
          static double less (const gaussian_efn & l, const gaussian_efn & r)
          {
@@ -449,7 +459,7 @@ namespace  ksi
 
    };
 
-   class expabs_efn 
+   class expabs_efn  : public extensional_fuzzy_number
    {
       public:
          expabs_efn () : expabs_efn(0.0, 0.0) {} 
@@ -461,9 +471,9 @@ namespace  ksi
          }
          static double equal (const expabs_efn & l, const expabs_efn & r)
          {
-               double d = std::abs(l._core - r._core);
-               double p = std::max(l._p, r._p); 
-               return relation(0.0, d, p);
+            double d = std::abs(l._core - r._core);
+            double p = std::max(l._p, r._p); 
+            return relation(0.0, d, p);
          }
          static double less (const expabs_efn & l, const expabs_efn & r)
          {
@@ -621,7 +631,7 @@ namespace  ksi
             void add_edge (const int start_node, const int end_node, const T &  weight)
             {
                nodes[start_node].push_back({end_node,  weight});
-               
+
                if (nodes.count(end_node) == 0)
                   nodes.insert({end_node, {}});
             }
@@ -629,7 +639,7 @@ namespace  ksi
             template <typename Y>
                friend std::ostream & operator << (std::ostream &, const graph<Y> &);
       };
-   
+
    template <typename T>
       std::ostream & operator << (std::ostream & sos, const graph<T> & g)
       {
@@ -642,20 +652,20 @@ namespace  ksi
          }
          return sos;
       }
-   
+
    template <typename T>
       void print (std::ostream & sos, const std::unordered_map<int, std::unordered_map<int, T>> & d) 
+      {
+         for (const auto [i, edges] : d)
          {
-            for (const auto [i, edges] : d)
+            sos << i << " | ";
+            for (const auto [j, w] : edges)
             {
-               sos << i << " | ";
-               for (const auto [j, w] : edges)
-               {
-                  sos << w << " ";             
-               }
-               sos << std::endl;
+               sos << w << " ";             
             }
+            sos << std::endl;
          }
+      }
 
    template <typename T>
       void print_paths (std::ostream & sos, const std::unordered_map<int, std::unordered_map<int, T>> & d, const std::unordered_map<int, std::unordered_map<int, int>> & p)
@@ -710,16 +720,16 @@ namespace  ksi
          {
             for (const int j : node_indices)
             {
-                if  (i == j)
-                {
-                   d[i][j] = T::zero();  
-                   p[i][j] = j;
-                }
-                else 
-                {
-                   d[i][j] = T::infinity();
-                   p[i][j] = std::numeric_limits<int>::min(); // nothing 
-                }
+               if  (i == j)
+               {
+                  d[i][j] = T::zero();  
+                  p[i][j] = j;
+               }
+               else 
+               {
+                  d[i][j] = T::infinity();
+                  p[i][j] = std::numeric_limits<int>::min(); // nothing 
+               }
             }
          }
          for (const auto [i, edges] : G.nodes)
@@ -873,9 +883,9 @@ void example_2()
 //---------------------
 void fuzzy_operations()
 {
-   fuzzy_set_triangle A (2, 3, 5);
-   fuzzy_set_triangle B (6, 7, 9);
-   tnorm_product t;
+   ksi::fuzzy_set_triangle A (2, 3, 5);
+   ksi::fuzzy_set_triangle B (6, 7, 9);
+   ksi::tnorm_product t;
    
 
    {
